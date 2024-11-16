@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	model "github.com/tanmay958/app-docker/models"
 
 	"gorm.io/gorm"
@@ -147,7 +148,30 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 func generateImageID() string {
 	return time.Now().Format("20060102150405999999")
 }
+func GetJobDetails(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	jobID := vars["jobID"]
 
+	// Fetch the job details from the database
+	var job model.Job
+	result := db.Preload("Images").First(&job, "job_id = ?", jobID) // Include images
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Job not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to fetch job details", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Encode the job details as JSON
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(job)
+	if err != nil {
+		http.Error(w, "Failed to encode job details", http.StatusInternalServerError)
+		return
+	}
+}
 // Placeholder for your actual job processing logic
 // func processJob(jobID string) {
 // 	// Implement your job processing logic here

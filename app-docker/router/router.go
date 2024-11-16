@@ -13,6 +13,7 @@ func SetupRouter() *mux.Router {
 	// Define routes
 	r.HandleFunc("/", serveHome).Methods("GET")
 	r.HandleFunc("/api/submit",controller.SubmitJob ).Methods("POST")
+	r.HandleFunc("/api/job/{jobID}", controller.GetJobDetails).Methods("GET") 
 	// r.HandleFunc("/api/status", controller.GetJobStatus).Methods("GET")
 	// Add more routes as needed...
 
