@@ -5,6 +5,11 @@ type Visit struct {
 	ImageURL  []string `json:"image_url"`
 	VisitTime string   `json:"visit_time"`
 }
+type Store struct {
+	StoreID      string           `json:"store_id"`
+	VisitorCount int              `json:"visitor_count"`
+	Images       map[string]Image `json:"images"` // Changed to map[string]Image
+}
 
 type VisitsResponse struct {
 	Count  int     `json:"count"`
@@ -12,7 +17,13 @@ type VisitsResponse struct {
 }
 
 type Job struct {
-	JobID    int      `json:"job_id"`
-	StoreID  string   `json:"store_id"`
-	ImageURL []string `json:"image_url"`
+	JobID   string           `json:"job_id"`
+	StoreID string           `json:"store_id"`
+	Images  map[string]Image `json:"images"`
+}
+
+type Image struct {
+	ImageID  string `json:"image_id"`
+	ImageURL string `json:"image_url"`
+	Status   string `json:"status"` // Added status field
 }
