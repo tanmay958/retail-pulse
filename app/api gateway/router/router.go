@@ -2,18 +2,20 @@ package router
 
 import (
 	"apigateway/controller"
+	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-func InitializeRouter() *mux.Router {
-	r := mux.NewRouter()
+func SetupRouter() *mux.Router {
+    r := mux.NewRouter()
+    r.HandleFunc("/",serveHome).Methods("GET")
+    r.HandleFunc("/api/submit",controller.SubmitJob).Methods("POST")
+    
+    r.HandleFunc("/api/status", controller.GetJobStatus).Methods("GET")
 
-	// Route to submit a job
-	r.HandleFunc("/api/submit/", controller.SubmitJobHandler).Methods("POST")
-
-	// Route to get job info
-	r.HandleFunc("/api/status", controller.GetJobStatusHandler).Methods("GET")
-
-	return r
+    return r
+}
+func serveHome(w http.ResponseWriter , r *http.Request) {
+	w.Write([]byte("<h1>hye Tanmay</h1>"))
 }

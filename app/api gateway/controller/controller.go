@@ -1,95 +1,106 @@
 package controller
 
 import (
+	model "apigateway/models"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strconv"
+	"sync"
 )
+var (
+	jobCounter int
+	jobMutex   sync.Mutex
+)
+var jobs []model.Job
 
-// RequestPayload represents the structure for job submission.
-type RequestPayload struct {
-	Count  int `json:"count"`
-	Visits []struct {
-		StoreID   string   `json:"store_id"`
-		ImageURL  []string `json:"image_url"`
-		VisitTime string   `json:"visit_time"`
-	} `json:"visits"`
+
+func SubmitJob(w http.ResponseWriter, r *http.Request) {
+   var requestData model.VisitsResponse
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	for _, visit := range requestData.Visits {
+		jobMutex.Lock()
+		jobCounter++
+		job := model.Job{
+			JobID:    jobCounter,
+			StoreID:  visit.StoreID,
+			ImageURL: visit.ImageURL,
+		}
+		jobs = append(jobs, job)
+		jobMutex.Unlock()
+	}
+    fmt.Println("Current job list:")
+		for _, j := range jobs {
+			fmt.Printf("  - Job ID: %d, Store ID: %s, Image URLs: %v\n", j.JobID, j.StoreID, j.ImageURL)
+		}
+
+	// Encode the response as JSON
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(requestData)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
 }
 
-// JobStatus represents the response for job status.
-type JobStatus struct {
-	Status string      `json:"status"`
-	JobID  int         `json:"job_id"`
-	Error  interface{} `json:"error,omitempty"`
+func processJob(jobID uint) {
+    // var job models.Job
+    // database.DB.Preload("Visits.ImageURLs").First(&job, jobID)
+
+    // for _, visit := range job.Visits {
+    //     for _, image := range visit.ImageURLs {
+    //         time.Sleep(time.Duration(rand.Intn(300)+100) * time.Millisecond) // Simulate processing
+    //         perimeter := calculatePerimeter(image.URL)
+    //         database.DB.Model(&image).Update("Perimeter", perimeter)
+    //     }
+    // }
+
+    // database.DB.Model(&job).Update("Status", "completed")
 }
 
-// Job represents an in-memory store for jobs.
-type Job struct {
-	ID      int
-	Payload RequestPayload
-	Status  string
-	Error   []struct {
-		StoreID string `json:"store_id"`
-		Error   string `json:"error"`
-	}
+func calculatePerimeter(url string) float64 {
+    // Mock perimeter calculation (replace with real logic)
+    return 2 * (1920 + 1080) // Assuming a fixed resolution
 }
 
-var jobIDCounter = 0
-var jobs = make(map[int]Job)
+func GetJobStatus(w http.ResponseWriter, r *http.Request) {
+    // jobIDStr := r.URL.Query().Get("jobid")
+    // jobID, err := strconv.Atoi(jobIDStr)
+    // if err != nil {
+    //     http.Error(w, `{"error":"Invalid job ID"}`, http.StatusBadRequest)
+    //     return
+    // }
 
-// SubmitJobHandler handles the job submission.
-func SubmitJobHandler(w http.ResponseWriter, r *http.Request) {
-	var payload RequestPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, `{"error": "invalid request payload"}`, http.StatusBadRequest)
-		return
-	}
+    // var job models.Job
+    // if err := database.DB.First(&job, jobID).Error; err != nil {
+    //     http.Error(w, `{"error":"Job not found"}`, http.StatusBadRequest)
+    //     return
+    // }
 
-	// Validate request payload
-	if payload.Count != len(payload.Visits) {
-		http.Error(w, `{"error": "count does not match the number of visits"}`, http.StatusBadRequest)
-		return
-	}
+    // if job.Status == "failed" {
+    //     var visits []models.Visit
+    //     database.DB.Where("job_id = ?", job.ID).Find(&visits)
 
-	// Create job
-	jobIDCounter++
-	job := Job{
-		ID:      jobIDCounter,
-		Payload: payload,
-		Status:  "ongoing",
-	}
-	jobs[jobIDCounter] = job
+    //     failedStores := []map[string]string{}
+    //     for _, visit := range visits {
+    //         failedStores = append(failedStores, map[string]string{"store_id": visit.StoreID})
+    //     }
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int{"job_id": jobIDCounter})
-}
+    //     json.NewEncoder(w).Encode(map[string]interface{}{
+    //         "status": "failed",
+    //         "job_id": job.ID,
+    //         "error":  failedStores,
+    //     })
+    //     return
+    // }
 
-// GetJobStatusHandler handles the job status query.
-func GetJobStatusHandler(w http.ResponseWriter, r *http.Request) {
-	jobIDParam := r.URL.Query().Get("jobid")
-	if jobIDParam == "" {
-		http.Error(w, `{"error": "jobid is required"}`, http.StatusBadRequest)
-		return
-	}
-
-	jobID, err := strconv.Atoi(jobIDParam)
-	if err != nil || jobID <= 0 {
-		http.Error(w, `{"error": "invalid jobid"}`, http.StatusBadRequest)
-		return
-	}
-
-	job, exists := jobs[jobID]
-	if !exists {
-		http.Error(w, `{message :  No such jobId found}`, http.StatusBadRequest) // JobID not found
-		return
-	}
-
-	
-	statusResponse := JobStatus{
-		Status: job.Status,
-		JobID:  job.ID,
-	}
-	
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(statusResponse)
+    // json.NewEncoder(w).Encode(map[string]interface{}{
+    //     "status": job.Status,
+    //     "job_id": job.ID,
+    // })
 }
