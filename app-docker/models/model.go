@@ -1,47 +1,44 @@
 package model
 
-// Visit model with foreign key to Store
+import (
+	"gorm.io/gorm"
+)
+
 type Visit struct {
-	ID        uint   `gorm:"primaryKey"`
-	StoreID   string `json:"store_id"`
-	ImageURL  []string `json:"image_url"`
-	VisitTime string `json:"visit_time"`
-	Store     Store `gorm:"foreignKey:StoreID;constraint:OnDelete:CASCADE;"` // Foreign key reference to Store
+    gorm.Model
+    StoreID  string `json:"store_id" gorm:"index"` 
+    ImageURL string `json:"image_url" gorm:"type:json"` // Use JSON to store array of strings
+    VisitTime string `json:"visit_time"`
 }
 
-// Store model with foreign key reference for Job and Image
 type Store struct {
-	ID            uint              `gorm:"primaryKey"`
-	StoreID       string            `json:"store_id"`
-	VisitorCount  int               `json:"visitor_count"`
-	Images        []Image           `json:"images"`   // One-to-many relation with Image
-	Visits        []Visit           `json:"visits"`   // One-to-many relation with Visit
-	Jobs          []Job             `json:"jobs"`     // One-to-many relation with Job
+	gorm.Model
+	StoreID      string           `json:"store_id" gorm:"index"`
+	StoreName    string           `json:"store_name"`       // New field for Store Name
+	AreaCode     string           `json:"area_code"`        // New field for Area Code
+	VisitorCount int              `json:"visitor_count"`
+	Images       []Image          `json:"images" gorm:"foreignKey:StoreID;references:StoreID"` 
 }
 
-// VisitsResponse model
 type VisitsResponse struct {
 	Count  int     `json:"count"`
 	Visits []Visit `json:"visits"`
 }
 
-// Job model with foreign key to Store
 type Job struct {
-	ID      uint              `gorm:"primaryKey"`
-	JobID   string            `json:"job_id"`
-	StoreID string            `json:"store_id"`
-	Images  []Image           `json:"images"`
-	Status  string            `json:"status"`
-	Store   Store             `gorm:"foreignKey:StoreID;constraint:OnDelete:CASCADE;"` // Foreign key reference to Store
+    gorm.Model
+    JobID  string  `json:"job_id" gorm:"index"` // Add index to JobID
+    Images []Image `json:"images" gorm:"foreignKey:JobID;references:JobID"` 
+    Status string  `json:"status"`
 }
 
-// Image model with foreign key to Job
+
 type Image struct {
-	ID        uint    `gorm:"primaryKey"`
+	gorm.Model
+	StoreID   string  `json:"-" gorm:"index"` // Add index for faster lookups, "-" to exclude from JSON
+	JobID     string  `json:"-" gorm:"index"` // Add index for faster lookups, "-" to exclude from JSON
 	ImageURL  string  `json:"image_url"`
 	Status    string  `json:"status"`
 	Perimeter float64 `json:"perimeter"`
-	ErrMessage string `json:"err"`
-	JobID     uint    `json:"job_id"`
-	Job       Job     `gorm:"foreignKey:JobID;constraint:OnDelete:CASCADE;"` // Foreign key reference to Job
+	ErrMessage string  `json:"err"`
 }
