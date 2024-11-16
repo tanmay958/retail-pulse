@@ -50,6 +50,5 @@ func DumpStoresFromCSV(csvFilePath string, db *gorm.DB) {
 	if err := db.Create(&stores).Error; err != nil {
 		log.Fatal("failed to insert stores into the database:", err)
 	}
-
 	fmt.Println("Stores have been successfully added to the database!")
 }
