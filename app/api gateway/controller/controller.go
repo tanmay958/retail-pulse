@@ -111,6 +111,7 @@ func processJob(jobID string) {
 	job, ok := jobs[jobID]
 	if !ok {
 		fmt.Printf("Job %s not found\n", jobID)
+
 		return
 	}
 
@@ -127,22 +128,18 @@ func processJob(jobID string) {
 			if err!=nil {
                 imageMux.Lock()
 			image.Status = "failed"
-			image.Perimeter = perimeter
+			image.ErrMessage =  err.Error() 
 			images[imageID] = image
             job.Images[imageID] =  *image
 			imageMux.Unlock()
-            }
-           
-       
-			// time.Sleep(time.Duration(rand.Float64()*0.3+0.1) * time.Second)
-
-			
+            }else{
 			imageMux.Lock()
 			image.Status = "completed"
 			image.Perimeter = perimeter
 			images[imageID] = image
             job.Images[imageID] =  *image
 			imageMux.Unlock()
+            }
 
 		}(imageID, &image,image.ImageURL)
 	}
@@ -178,23 +175,33 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	if allCompleted {
 		job.Status = "completed"
 	}
+	failedImages := []map[string]string{}
+	for imageID, image := range job.Images {
+		if image.Status == "failed" {
+			failedImages = append(failedImages, map[string]string{
+				"image_id": imageID,
+				"error":    image.ErrMessage, 
+			})
+		}
+	}
 
-	// Prepare the response
+	
+	if len(failedImages) > 0 {
+		response := map[string]interface{}{
+			"status": "failed",
+			"job_id": job.JobID,
+			"error":  failedImages,
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	
 	response := map[string]interface{}{
 		"status": job.Status,
 		"job_id": job.JobID,
 	}
 
-	// Include image details in the response
-	imageDetails := make(map[string]map[string]interface{})
-	for imageID, image := range job.Images {
-		imageDetails[imageID] = map[string]interface{}{
-			"status":    image.Status,
-			"url":       image.ImageURL,
-            "perimeter" : image.Perimeter,
-		}
-	}
-	response["images"] = imageDetails
-
+	
 	json.NewEncoder(w).Encode(response)
+    return 
 }
