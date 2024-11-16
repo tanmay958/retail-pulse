@@ -29,6 +29,11 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+    if requestData.Count == 0 || len(requestData.Visits) == 0 || requestData.Count != len(requestData.Visits) {
+		http.Error(w, `{"error":"Missing fields or count mismatch"}`, http.StatusBadRequest)
+		return
+	}
+
 
 	now := time.Now()
 	jobID := now.Format("20060102150405") 
@@ -203,5 +208,5 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	
 	json.NewEncoder(w).Encode(response)
-    return 
+  
 }
