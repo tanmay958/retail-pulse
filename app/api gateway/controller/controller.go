@@ -4,10 +4,18 @@ import (
 	model "apigateway/models"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
+
+var (
+   
+    imageMux sync.Mutex // Mutex for images map
+)
+
 
 	var stores   = make(map[string]*model.Store)
 	var jobs     = make(map[string]*model.Job)
@@ -24,7 +32,6 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	jobID := now.Format("20060102150405") 
 	for _, visit := range requestData.Visits {
-		// Update Store objects
         fmt.Printf("%s\n",visit.StoreID )
 		store, ok := stores[visit.StoreID]
 
@@ -59,7 +66,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
             image,ok :=  images[imageID]
             if !ok {
                 image = &model.Image{
-                    ImageID:imageID,
+                    
                     ImageURL:url ,
                     Status:"pending",
 
@@ -70,10 +77,12 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 			job.Images[imageID] = *image
 			store.Images[imageID] = *image
 		}
+      
 
-		// Print job list
+		
 		
 	}
+    go processJob(jobID)
     
         fmt.Println("current image list")
         for imageID, image := range images {
@@ -98,18 +107,60 @@ func generateImageID() string {
 	return time.Now().Format("20060102150405999999")
 }
 
-func processJob(jobID uint) {
-}
+func processJob(jobID string) {
+    fmt.Println(jobID)
+	job, ok := jobs[jobID]
+	if !ok {
+		fmt.Printf("Job %s not found\n", jobID)
+		return
+	}
 
+	var wg sync.WaitGroup // WaitGroup for parallel processing
+	for imageID, image := range job.Images {
+		wg.Add(1) // Increment WaitGroup counter
+  
+		go func(imageID string, image *model.Image) {
+			defer wg.Done() 
+
+			
+			fmt.Printf("Downloading image %s from URL %s\n", imageID, image.ImageURL)
+			
+			
+			height := 1080 
+			width := 1920  
+			perimeter := 2 * (height + width)
+           
+            time.Sleep(time.Duration(rand.Float64()*2+5) * time.Second) 
+			// time.Sleep(time.Duration(rand.Float64()*0.3+0.1) * time.Second)
+
+			
+			imageMux.Lock()
+			image.Status = "completed"
+			image.Perimeter = perimeter
+			images[imageID] = image
+            job.Images[imageID] =  *image
+			imageMux.Unlock()
+
+		}(imageID, &image)
+	}
+    
+	wg.Wait() 
+  
+}
 
 func GetJobStatus(w http.ResponseWriter, r *http.Request) {
     jobIDStr := r.URL.Query().Get("jobid")
 
 	job, ok := jobs[jobIDStr] // Access the job from the jobs map
+  
 	if !ok {
 		http.Error(w, `{"error":"Job not found"}`, http.StatusBadRequest)
 		return
 	}
+    for imageID, image := range job.Images {
+        fmt.Printf("  - Image ID: %s, URL: %s, Status: %s\n", imageID, image.ImageURL, image.Status)
+    }
+    fmt.Println("--------------")
 
 	// Calculate the overall job status based on image statuses
 	allCompleted := true
