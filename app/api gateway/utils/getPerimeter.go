@@ -30,6 +30,6 @@ func CalculatePerimeter(imageURL string) (float64, error) {
 
 	// Calculate perimeter
 	perimeter := 2 * (width + height)
-	fmt.Println(perimeter,"---")
+	
 	return perimeter, nil
 }

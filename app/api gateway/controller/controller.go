@@ -4,7 +4,6 @@ import (
 	model "apigateway/models"
 	"apigateway/utils"
 	"encoding/json"
-	"fmt"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
@@ -38,7 +37,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	jobID := now.Format("20060102150405") 
 	for _, visit := range requestData.Visits {
-        fmt.Printf("%s\n",visit.StoreID )
+      
 		store, ok := stores[visit.StoreID]
 
 		if !ok {
@@ -107,11 +106,9 @@ func generateImageID() string {
 }
 
 func processJob(jobID string) {
-    fmt.Println(jobID)
+  
 	job, ok := jobs[jobID]
 	if !ok {
-		fmt.Printf("Job %s not found\n", jobID)
-
 		return
 	}
 
