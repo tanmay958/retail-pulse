@@ -2,6 +2,7 @@ package controller
 
 import (
 	model "apigateway/models"
+	"apigateway/utils"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
@@ -46,9 +47,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 		}
 		store.VisitorCount++
         
-        // stores[visit.StoreID] = 
-
-		// Create Job objects
+       //create JOB id 
 	
 		job, ok := jobs[jobID]
 		if !ok {
@@ -96,7 +95,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(response) // Encode the response map
+	err = json.NewEncoder(w).Encode(response) 
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
@@ -116,21 +115,25 @@ func processJob(jobID string) {
 	}
 
 	var wg sync.WaitGroup // WaitGroup for parallel processing
-	for imageID, image := range job.Images {
-		wg.Add(1) // Increment WaitGroup counter
+	for imageID, image  := range job.Images {
+		wg.Add(1) 
   
-		go func(imageID string, image *model.Image) {
+		go func(imageID string, image *model.Image,ImageURL  string) {
 			defer wg.Done() 
 
+            time.Sleep(time.Duration(rand.Float64()*2+10) * time.Second) 
+		    perimeter ,err :=  utils.CalculatePerimeter(ImageURL)
 			
-			fmt.Printf("Downloading image %s from URL %s\n", imageID, image.ImageURL)
-			
-			
-			height := 1080 
-			width := 1920  
-			perimeter := 2 * (height + width)
+			if err!=nil {
+                imageMux.Lock()
+			image.Status = "failed"
+			image.Perimeter = perimeter
+			images[imageID] = image
+            job.Images[imageID] =  *image
+			imageMux.Unlock()
+            }
            
-            time.Sleep(time.Duration(rand.Float64()*2+5) * time.Second) 
+       
 			// time.Sleep(time.Duration(rand.Float64()*0.3+0.1) * time.Second)
 
 			
@@ -141,7 +144,7 @@ func processJob(jobID string) {
             job.Images[imageID] =  *image
 			imageMux.Unlock()
 
-		}(imageID, &image)
+		}(imageID, &image,image.ImageURL)
 	}
     
 	wg.Wait() 
@@ -188,6 +191,7 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 		imageDetails[imageID] = map[string]interface{}{
 			"status":    image.Status,
 			"url":       image.ImageURL,
+            "perimeter" : image.Perimeter,
 		}
 	}
 	response["images"] = imageDetails

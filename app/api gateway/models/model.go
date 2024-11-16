@@ -23,7 +23,8 @@ type Job struct {
 }
 
 type Image struct {
-	ImageURL  string `json:"image_url"`
-	Status    string `json:"status"` // Added status field
-	Perimeter int    `json:"perimeter"`
+	ImageURL   string  `json:"image_url"`
+	Status     string  `json:"status"` // Added status field
+	Perimeter  float64 `json:"perimeter"`
+	ErrMessage string  `json:"err"`
 }
