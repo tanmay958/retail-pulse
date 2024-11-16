@@ -87,13 +87,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 		
 	}
     go processJob(jobID)
-    
-        fmt.Println("current image list")
-        for imageID, image := range images {
-            fmt.Printf("  - Image ID: %s, URL: %s, Status: %s\n", imageID, image.ImageURL, image.Status)
-        }
-        fmt.Println("--------------")
-        
+
 	// Encode the response as JSON
     response := map[string]string{
 		"jobid": jobID,
@@ -163,10 +157,6 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Job not found"}`, http.StatusBadRequest)
 		return
 	}
-    for imageID, image := range job.Images {
-        fmt.Printf("  - Image ID: %s, URL: %s, Status: %s\n", imageID, image.ImageURL, image.Status)
-    }
-    fmt.Println("--------------")
 
 	// Calculate the overall job status based on image statuses
 	allCompleted := true
