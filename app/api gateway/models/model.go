@@ -17,13 +17,14 @@ type VisitsResponse struct {
 }
 
 type Job struct {
-	JobID   string           `json:"job_id"`
-	StoreID string           `json:"store_id"`
-	Images  map[string]Image `json:"images"`
+	JobID  string           `json:"job_id"`
+	Images map[string]Image `json:"images"`
+	Status string           `json:"status"`
 }
 
 type Image struct {
-	ImageID  string `json:"image_id"`
-	ImageURL string `json:"image_url"`
-	Status   string `json:"status"` // Added status field
+	ImageID   string `json:"image_id"`
+	ImageURL  string `json:"image_url"`
+	Status    string `json:"status"` // Added status field
+	Perimeter string `json:"-"`
 }
