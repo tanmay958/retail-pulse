@@ -1,0 +1,36 @@
+version: "3.9"
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: tanmay
+      MYSQL_USER: tanmay
+      MYSQL_PASSWORD: 12345
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p12345"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: golang:latest
+    container_name: go_app
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: tanmay
+      DB_PASSWORD: 12345
+      DB_NAME: tanmay
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["go", "run", "main.go"]
