@@ -175,12 +175,7 @@ func GetJobDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-// Placeholder for your actual job processing logic
-// func processJob(jobID string) {
-// 	// Implement your job processing logic here
-// 	fmt.Println("Processing job:", jobID)
-// 	// ... update image statuses, perform calculations, etc. ...
-// }
+
 func processJob(jobID string) {
 	fmt.Println("Processing job:", jobID)
 

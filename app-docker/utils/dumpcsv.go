@@ -11,8 +11,6 @@ import (
 )
 
 func DumpStoresFromCSV(csvFilePath string, db *gorm.DB) {
-	fmt.Println("hye")
-	// Open the CSV file
 	file, err := os.Open(csvFilePath)
 	if err != nil {
 		log.Fatal("failed to open CSV file:", err)
