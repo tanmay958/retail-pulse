@@ -2,14 +2,16 @@ package controller
 
 import (
 	"encoding/json"
-
+	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
 	model "github.com/tanmay958/app-docker/models"
-
+	"github.com/tanmay958/app-docker/utils"
 	"gorm.io/gorm"
 )
 
@@ -130,7 +132,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// go processJob(jobID)
+	go processJob(jobID)
 
 	// Encode the response as JSON
 	response := map[string]string{
@@ -145,9 +147,9 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateImageID() string {
-	return time.Now().Format("20060102150405999999")
-}
+// func generateImageID() string {
+// 	return time.Now().Format("20060102150405999999")
+// }
 func GetJobDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["jobID"]
@@ -178,3 +180,107 @@ func GetJobDetails(w http.ResponseWriter, r *http.Request) {
 // 	fmt.Println("Processing job:", jobID)
 // 	// ... update image statuses, perform calculations, etc. ...
 // }
+func processJob(jobID string) {
+	fmt.Println("Processing job:", jobID)
+
+	// Fetch the job with its associated images from the database
+	var job model.Job
+	result := db.Preload("Images").First(&job, "job_id = ?", jobID)
+	if result.Error != nil {
+		fmt.Printf("Job %s not found or error fetching: %v\n", jobID, result.Error)
+		return
+	}
+
+	var wg sync.WaitGroup
+	for _, image := range job.Images {
+		wg.Add(1)
+		go func(image model.Image) {
+			defer wg.Done()
+
+			time.Sleep(time.Duration(rand.Float64()*2+10) * time.Second)
+
+			perimeter, err := utils.CalculatePerimeter(image.ImageURL)
+			if err != nil {
+				// Update image status to "failed" and store the error message
+				image.Status = "failed"
+				image.ErrMessage = err.Error()
+			} else {
+				// Update image status to "completed" and store the perimeter
+				image.Status = "completed"
+				image.Perimeter = perimeter
+			}
+
+			// Save the updated image in the database
+			result := db.Save(&image)
+			if result.Error != nil {
+				fmt.Printf("Error updating image %d: %v\n", image.ID, result.Error)
+			}
+		}(image)
+	}
+
+	wg.Wait()
+}
+
+func GetJobStatus(w http.ResponseWriter, r *http.Request) {
+	jobIDStr := r.URL.Query().Get("jobid")
+
+	// Fetch the job with its associated images from the database
+	var job model.Job
+	result := db.Preload("Images").First(&job, "job_id = ?", jobIDStr)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, `{"error":"Job not found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to fetch job details", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Print image details (for debugging)
+	for _, image := range job.Images {
+		fmt.Printf(" - Image ID: %d, URL: %s, Status: %s\n", image.ID, image.ImageURL, image.Status)
+	}
+	fmt.Println("--------------")
+
+	// Calculate the overall job status based on image statuses
+	allCompleted := true
+	for _, image := range job.Images {
+		if image.Status != "completed" {
+			allCompleted = false
+			break
+		}
+	}
+
+	// Update job status if all images are completed
+	if allCompleted {
+		job.Status = "completed"
+		db.Save(&job) // Update the job status in the database
+	}
+
+	failedImages := []map[string]string{}
+	for _, image := range job.Images {
+		if image.Status == "failed" {
+			failedImages = append(failedImages, map[string]string{
+				"image_id": fmt.Sprintf("%d", image.ID), // Use image ID from database
+				"error":    image.ErrMessage,
+			})
+		}
+	}
+
+	if len(failedImages) > 0 {
+		response := map[string]interface{}{
+			"status": "failed",
+			"job_id": job.JobID,
+			"error":  failedImages,
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status": job.Status,
+		"job_id": job.JobID,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}

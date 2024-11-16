@@ -10,12 +10,12 @@ import (
 func SetupRouter() *mux.Router {
 	r := mux.NewRouter()
 
-	// Define routes
+	
 	r.HandleFunc("/", serveHome).Methods("GET")
 	r.HandleFunc("/api/submit",controller.SubmitJob ).Methods("POST")
 	r.HandleFunc("/api/job/{jobID}", controller.GetJobDetails).Methods("GET") 
-	// r.HandleFunc("/api/status", controller.GetJobStatus).Methods("GET")
-	// Add more routes as needed...
+	r.HandleFunc("/api/status", controller.GetJobStatus).Methods("GET")
+	
 
 	return r
 }
