@@ -100,6 +100,7 @@ func SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(response) 
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -210,3 +211,4 @@ func GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
   
 }
+
